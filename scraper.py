@@ -8,11 +8,46 @@ URL = os.environ.get("SUPABASE_URL")
 KEY = os.environ.get("SUPABASE_KEY")
 
 def scrape_and_save():
-    # 1. THE TARGET: A sample results page (we'll use a generic example)
-    target_url = "https://www.sportinglife.com/racing/results" # Example source
+    target_url = "https://www.sportinglife.com/racing/results"
     headers = {"User-Agent": "Mozilla/5.0"}
     
-    print(f"Searching for horses at {target_url}...")
+    print(f"Searching for ACTUAL horses at {target_url}...")
+    
+    response = httpx.get(target_url, headers=headers)
+    soup = BeautifulSoup(response.text, 'html.parser')
+    
+    found_horses = []
+    # This specifically targets the 'HorseName' links inside the results container
+    # It also ignores common menu items
+    junk_words = ["Free Bets", "Racecards", "Fast Results", "Scores", "NEW", "Log In"]
+    
+    for horse in soup.find_all('a'):
+        name = horse.text.strip()
+        # Look for the specific Sporting Life CSS class for horse names
+        is_horse_class = any("HorseName" in cls for cls in horse.get("class", []))
+        
+        if is_horse_class and name not in junk_words:
+            found_horses.append({
+                "horse_name": name,
+                "jockey_name": "Pro Scraper",
+                "odds_decimal": 0.0
+            })
+
+    # Limit to 10 real horses for this test
+    found_horses = found_horses[:10]
+
+    api_url = f"{URL}/rest/v1/results"
+    auth_headers = {
+        "apikey": KEY,
+        "Authorization": f"Bearer {KEY}",
+        "Content-Type": "application/json"
+    }
+
+    if found_horses:
+        print(f"Success! Found {len(found_horses)} real horses. Sending to database...")
+        httpx.post(api_url, headers=auth_headers, json=found_horses)
+    else:
+        print("Still couldn't find real horse names. Website layout might have changed.")
     
     # 2. THE GRAB: Fetching the website content
     response = httpx.get(target_url, headers=headers)
