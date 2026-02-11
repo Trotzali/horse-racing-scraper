@@ -18,18 +18,27 @@ def scrape_and_save():
     response = httpx.get(target_url, headers=headers)
     soup = BeautifulSoup(response.text, 'html.parser')
     
-    # 3. THE LOGIC: Finding horse names (this is a simplified example)
-    # Most sites use specific 'tags' for horse names
+  # 3. THE LOGIC: Finding ACTUAL horse names
     found_horses = []
     
-    # This logic looks for common ways sites list horse names
-    for horse in soup.find_all('span', limit=5): # Just grabbing the first 5 for the test
+    # This specifically looks for the horse name links on Sporting Life
+    # We look for <a> tags that have 'HorseName' in their class
+    for horse in soup.find_all('a', class_='HorseName-sc-16u6769-0'):
         name = horse.text.strip()
-        if len(name) > 2: # Ignore tiny snippets
+        if name:
             found_horses.append({
                 "horse_name": name,
-                "jockey_name": "Scraped Jockey",
-                "odds_decimal": 4.0
+                "jockey_name": "Pro Scraper",
+                "odds_decimal": 0.0 # We can add odds logic next!
+            })
+    
+    # If the class above changed, this is a backup for generic racing sites:
+    if not found_horses:
+        for horse in soup.select('.horse-name, .hr-racing-runner-name'):
+            found_horses.append({
+                "horse_name": horse.text.strip(),
+                "jockey_name": "Backup Scraper",
+                "odds_decimal": 0.0
             })
 
     # 4. THE SAVE: Sending them to your Supabase Pantry
