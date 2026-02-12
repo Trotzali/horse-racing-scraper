@@ -1,0 +1,173 @@
+# 🏇 Australian Racing Database Scraper
+
+A daily automated scraper that populates a Supabase database with Australian horse racing results using **Playwright** for JavaScript-rendered sites.
+
+## 🎯 What This Does
+
+- Scrapes **all Australian metropolitan races** for the current day
+- Captures **35 specific data points** per runner (sectionals, margins, stewards' notes, etc.)
+- Uses **browser automation** (Playwright) to handle JavaScript-heavy websites
+- Automatically uploads to **Supabase** PostgreSQL database
+- Runs daily via **GitHub Actions** at midnight UTC
+
+## ⚠️ Why the Old Version Failed
+
+The previous scraper used `httpx` + `BeautifulSoup` which only gets the **HTML shell**. Sites like Racenet.com.au and Punters.com.au are React/Next.js Single Page Applications that load race data via JavaScript **after** the initial page load.
+
+**Result:** The old scraper captured the navigation menu ("Fast Results", "Scores") instead of actual race data.
+
+**Solution:** Playwright launches a real browser that waits for JavaScript to render before scraping.
+
+## 🚀 Quick Start
+
+### 1. Set Up Supabase
+
+Run this SQL in your Supabase SQL Editor:
+
+```sql
+-- See supabase_schema.sql for the complete table creation script
+```
+
+Copy and paste the contents of `supabase_schema.sql` into your Supabase SQL editor and run it.
+
+### 2. Local Setup
+
+```bash
+# Clone your repo
+git clone https://github.com/Trotzali/horse-racing-scraper.git
+cd horse-racing-scraper
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Install Playwright browser
+playwright install chromium
+
+# Create .env file
+echo "SUPABASE_URL=https://meboybkxqqpbptfzxgbw.supabase.co" > .env
+echo "SUPABASE_KEY=your_supabase_anon_key_here" >> .env
+```
+
+### 3. Test Locally
+
+```bash
+python scraper.py
+```
+
+You should see:
+```
+🏇 Australian Racing Scraper v2.0
+==================================================
+🎯 Target: https://www.racenet.com.au/results/horse-racing/2026-02-12
+🌐 Launching headless browser...
+⏳ Waiting for race results to load...
+📋 Found 8 race containers
+...
+✅ SUCCESS! 120 results uploaded
+```
+
+### 4. Set Up GitHub Actions (Automation)
+
+1. Go to your repo → **Settings** → **Secrets and variables** → **Actions**
+2. Add two secrets:
+   - `SUPABASE_URL`: `https://meboybkxqqpbptfzxgbw.supabase.co`
+   - `SUPABASE_KEY`: Your Supabase anon/service key
+
+3. Replace `.github/workflows/daily_scrape.yml` with `daily_scrape_fixed.yml`
+
+4. The workflow will now run daily at midnight UTC automatically!
+
+## 📁 File Structure
+
+```
+horse-racing-scraper/
+├── scraper.py              # Main scraper (Playwright-based)
+├── test_db.py              # Test Supabase connection
+├── requirements.txt        # Python dependencies
+├── supabase_schema.sql     # Database schema
+├── .env                    # Your credentials (DO NOT commit!)
+├── .gitignore              # Excludes .env from git
+└── .github/
+    └── workflows/
+        └── daily_scrape.yml  # GitHub Actions automation
+```
+
+## 🔧 Troubleshooting
+
+### "No results found"
+
+**Cause:** Race data might not be available yet (races haven't finished)
+
+**Solution:** Run later in the day when races have concluded, or test with yesterday's date:
+
+```python
+# In scraper.py, temporarily change:
+today = "2026-02-11"  # Yesterday's date
+```
+
+### "Playwright not installed"
+
+```bash
+playwright install chromium
+playwright install-deps
+```
+
+### "API returned 401"
+
+**Cause:** Wrong Supabase key
+
+**Solution:** 
+1. Go to Supabase Dashboard → Settings → API
+2. Copy your **anon** key (or **service_role** key for full access)
+3. Update your `.env` file
+
+### "Table doesn't exist"
+
+Run the `supabase_schema.sql` script in your Supabase SQL editor.
+
+### GitHub Actions fails
+
+Check:
+1. Secrets are set correctly in GitHub repo settings
+2. Workflow file is in `.github/workflows/` directory
+3. `playwright install chromium` is in the workflow
+
+## 📊 Data Quality
+
+The scraper captures:
+
+✅ **Identity:** Meeting name, date, race number, race name  
+✅ **Environment:** Track condition, rail position, weather, distance  
+✅ **Runner Details:** Horse, jockey, trainer, weight, barrier  
+✅ **Results:** Finishing position, margins, prize money, starting price  
+✅ **In-Running:** Settling position, 800m/400m positions  
+✅ **Sectionals:** 600m, 400m, 200m times  
+✅ **Pedigree:** Sire, dam, days since last run  
+
+## 🔄 Data Sources
+
+**Primary:** Racenet.com.au (Playwright scraping)  
+**Fallback:** Tab.com.au public API (if Playwright fails)
+
+## 📝 Notes
+
+- **Metro tracks only:** Filters to major Australian tracks (Flemington, Randwick, etc.)
+- **Finished races only:** Skips races that haven't concluded
+- **Duplicate prevention:** Check your Supabase table for a unique constraint if needed
+
+## 🤝 Contributing
+
+Found a bug? Open an issue!  
+Want to add features? Submit a PR!
+
+## 📜 License
+
+MIT License - Use freely for your projects
+
+---
+
+**Built with Playwright, Supabase, and love for Australian racing** 🇦🇺
