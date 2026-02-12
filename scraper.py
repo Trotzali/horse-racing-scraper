@@ -56,7 +56,7 @@ async def scrape_racenet_with_browser():
     Use Playwright to render JavaScript and scrape actual race results.
     This solves the 'Fast Results' menu problem.
     """
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = "2026-02-11"  # Testing with yesterday's date
     target_url = f"https://www.racenet.com.au/results/horse-racing/{today}"
     
     print(f"🎯 Target: {target_url}")
